@@ -1,28 +1,35 @@
 import numpy as np
 import matplotlib.pylab as plt
-from make_dataObj import ADHD200, FPADHD200
+from make_dataObj import ADHD200, TestADHD200
 import time
-from dbn.tensorflow import SupervisedDBNClassification
+# from sklearn.svm import LinearSVC
+# from dbn.tensorflow import SupervisedDBNClassification
+from sklearn.model_selection import GridSearchCV
+from sklearn.neural_network import MLPClassifier
 from nilearn.connectome import ConnectivityMeasure
 from nilearn import datasets, input_data
-from sklearn.svm import LinearSVC
 from sklearn.metrics import confusion_matrix, classification_report, f1_score
+import progressbar
 
 t0 = time.time()
 
 
-def generate_train_data():
+def generate_train_data(eq):
+    print "Getting ADHD Train Data..."
     adhd_data = ADHD200()
-    adhd_data.gen_data()
+    adhd_data.gen_data(eq=eq)
     return adhd_data
 
 
-def generate_fp_data(adhd200obj):
-    fp_adhd200 = FPADHD200(adhd200obj)
-    return fp_adhd200
+def generate_test_data(adhd200obj):
+    print "Getting ADHD Test Data..."
+    adhd200obj.gen_data(train=False)
+    test_adhd200 = TestADHD200(adhd200obj)
+    return test_adhd200
 
 
 def get_msdl_data():
+    print "Getting MSDL Atlas Data..."
     msdl_data = datasets.fetch_atlas_msdl()
     msdl_coords = msdl_data.region_coords
     n_regions = len(msdl_coords)
@@ -30,26 +37,33 @@ def get_msdl_data():
         n_regions, msdl_data.networks))
     masker = input_data.NiftiMapsMasker(
         msdl_data.maps, resampling_target="data", t_r=2.5, detrend=True,
-        low_pass=.1, high_pass=.01, memory='nilearn_cache', memory_level=1)
+        low_pass=.1, high_pass=.01, memory='nilearn_cache', memory_level=1, standardize=True)
 
     return msdl_data, msdl_coords, masker
 
 
 def get_adhd_dataset_info(adhd_class, masker):
+    print "Extracting info and masking NiFTi volumes..."
     adhd_subjects = []
     pooled_subjects = []
     site_names = adhd_class.site_names
     adhd_labels = adhd_class.labels  # 1 if ADHD, 0 if control
+    print "\n"
+    bar = progressbar.ProgressBar(max_value=len(adhd_class.func))
+    ops = 0
     # print 'confounds', adhd_data.confounds
     for func_file, phenotypic, is_adhd, site in zip(
             adhd_class.func, adhd_class.pheno, adhd_labels, adhd_class.site_names):
-        print "masking", func_file
+        bar.update(ops)
+        ops += 1
         time_series = masker.fit_transform(func_file)
         pooled_subjects.append(time_series)
         if is_adhd == 1:
             adhd_subjects.append(time_series)
         # adhd_labels.append(is_adhd)
+    print "\n"
     print('Data has {0} ADHD subjects.'.format(len(adhd_subjects)))
+    bar.finish()
     return adhd_subjects, pooled_subjects, site_names, adhd_labels
 
 
@@ -70,18 +84,33 @@ def run_model(kinds, biomarkers, preds, adhd_labels, y_true, f1=True, graph=Fals
               print_results=False):
     accuracies = []
     for k in kinds:
-        # svc = MLPClassifier(hidden_layer_sizes=(20, 20, 20), random_state=0, solver='adam', verbose=True)
-        clf = SupervisedDBNClassification(hidden_layers_structure=[64, 64],
-                                          learning_rate_rbm=0.05,
-                                          learning_rate=0.1,
-                                          n_epochs_rbm=20,
-                                          n_iter_backprop=500,
-                                          batch_size=32,
-                                          activation_function='relu',
-                                          dropout_p=0.2)
-        clf.fit(biomarkers[k], adhd_labels)
-        y_pred = clf.predict(preds[k])
-        clf.save('model.pkl')
+        classifier = MLPClassifier()
+        parameters = {'batch_size': [16, 32],
+                      'hidden_layer_sizes': [(100, 50), (2, 2), (2, 2, 2), (256, 256)],
+                      'learning_rate': ['constant', 'adaptive'],
+                      'solver': ['sgd', 'adam'],
+                      'shuffle': [True],
+                      'random_state': [0],
+                      'activation': ['relu', 'logistic'],
+                      'verbose': [100]
+                      }
+
+        grid_search = GridSearchCV(estimator=classifier,
+                                   param_grid=parameters,
+                                   scoring='f1',
+                                   verbose=100,
+                                   cv=10)
+        grid_search = grid_search.fit(biomarkers[k], adhd_labels)
+
+        best_parameters = grid_search.best_params_
+        best_accuracy = grid_search.best_score_
+        print "best accuracy", best_accuracy
+        print "best params", best_parameters
+
+        # clf = LinearSVC(random_state=0)
+        # y_pred = clf.predict(preds[k])
+        # clf.save('model.pkl')
+        '''
         accuracies.append(f1_score(y_true, y_pred))
 
         if c_matrix:
@@ -98,6 +127,7 @@ def run_model(kinds, biomarkers, preds, adhd_labels, y_true, f1=True, graph=Fals
             print 'pred ' + str(list(y_pred))
             print 'true ' + str(list(y_true))
             print '\n\n'
+
     if f1:
         print "Best Connectome Strategy"
         print kinds[accuracies.index(max(accuracies))], '-', max(accuracies)
@@ -105,6 +135,7 @@ def run_model(kinds, biomarkers, preds, adhd_labels, y_true, f1=True, graph=Fals
         print accuracies
     if graph:
         return accuracies
+'''
 
 
 def draw_graph(kinds, accuracies):
@@ -126,17 +157,24 @@ def draw_graph(kinds, accuracies):
 
 def main():
     t0 = time.time()
-    adhd_data = generate_train_data()
-    # fp_adhd_data = generate_fp_data(adhd_data)
     msdl_data, msdl_coords, masker = get_msdl_data()
-    # fp_adhd_subjects, fp_pooled_subjects, fp_site_names, fp_labels = get_adhd_dataset_info(fp_adhd_data, masker)
+
+    adhd_data = generate_train_data(1.45)
+    test_adhd_data = generate_test_data(adhd_data)
+    test_adhd_subjects, test_pooled_subjects, test_site_names, test_labels = get_adhd_dataset_info(test_adhd_data,
+                                                                                                   masker)
     adhd_subjects, pooled_subjects, site_names, adhd_labels = get_adhd_dataset_info(adhd_data, masker)
+
     kinds = ['correlation', 'partial correlation', 'tangent', 'covariance', 'precision']
+
     biomarkers = make_connectivity_biomarkers(kinds, pooled_subjects)
-    # fp_biomarkers = make_connectivity_biomarkers(kinds, fp_pooled_subjects)
-    accuracies = run_model(kinds, biomarkers, biomarkers, adhd_labels, adhd_labels, graph=True, c_matrix=True,
+    test_biomarkers = make_connectivity_biomarkers(kinds, test_pooled_subjects)
+
+    accuracies = run_model(kinds, biomarkers, test_biomarkers, adhd_labels, test_labels, graph=True, c_matrix=True,
                            print_results=True, f1=True)
+
     print "ran model", time.time() - t0, 'seconds'
+
     if accuracies:
         draw_graph(kinds, accuracies)
 
