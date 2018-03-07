@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
-from utils import ADHD200, colors
+from utils import ADHD200, conform_1d
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.neural_network import MLPClassifier
 from nilearn.connectome import ConnectivityMeasure
@@ -10,8 +10,6 @@ import progressbar
 import warnings
 import time
 from pheno import get_model, predict
-from nolearn.dbn import DBN
-import pprint
 
 warnings.filterwarnings("ignore")
 t0 = time.time()
@@ -74,12 +72,15 @@ def make_connectivity_biomarkers(kinds, labels, adhd200, func_files, pooled_subj
             probs = predict(model, adhd200, func_files[index])
             if probs:
                 new_labels.append(labels[index])
-                new_x.append([probs, connectivity[index]])
-                print [probs, connectivity[index]]
+                features = np.array([conform_1d(probs, connectivity[index].shape[0]), connectivity[index]])
+                new_x.append(features)
             else:
                 print 'no phenotypic information found!'
                 continue
-        connectivity_biomarkers[k] = new_x
+        d3_dataset = np.array(new_x)
+        nsamples, nx, ny = d3_dataset.shape
+        d2_dataset = d3_dataset.reshape((nsamples, nx * ny))
+        connectivity_biomarkers[k] = d2_dataset
     return connectivity_biomarkers, new_labels
 
 
@@ -145,7 +146,8 @@ def main(map, layers):
 
     # kinds = ['correlation', 'partial correlation', 'tangent', 'covariance', 'precision']
     kinds = ['tangent']
-    biomarkers, adhd_labels = make_connectivity_biomarkers(kinds, o_adhd_labels, adhd_data, adhd_data.func, pooled_subjects)
+    biomarkers, adhd_labels = make_connectivity_biomarkers(kinds, o_adhd_labels, adhd_data, adhd_data.func,
+                                                           pooled_subjects)
 
     accuracies = run_model(kinds, biomarkers, adhd_labels, layers, graph=True,
                            c_matrix=True, print_results=True, f1=True)
@@ -158,8 +160,8 @@ def main(map, layers):
 
 
 if __name__ == '__main__':
-    # main('sub-maxprob-thr50-2mm', 462)
-    main('sub-maxprob-thr50-2mm', 136)
+    main('sub-maxprob-thr50-2mm', 462)
+    #main('sub-maxprob-thr50-2mm', 136)
 
 '''
 def main(layers, kinds, biomarkers, adhd_labels):

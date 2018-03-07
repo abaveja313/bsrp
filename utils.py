@@ -218,6 +218,12 @@ class TestADHD200:
         self.site_names = adhd200Obj.test_site_names
 
 
+def conform_1d(value, target):
+    new_array = [0] * target
+    new_array[0] = value
+    return np.array(new_array)
+
+
 '''
 a = ADHD200()
 a.unzip_files('NYU')
