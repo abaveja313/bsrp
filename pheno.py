@@ -12,8 +12,9 @@ def get_model(tts=0.2):
     print 'training = {0} samples\ntesting = {1} samples'.format(len(X_train), len(y_test))
     clf = GaussianNB()
     clf.fit(X_train, y_train)
-    #y_pred = clf.predict(X_test)
-    #print classification_report(y_test, y_pred)
+    print 'Pheno Classification Accuracy:'
+    y_pred = clf.predict(X_test)
+    print classification_report(y_test, y_pred)
     return clf
 
 

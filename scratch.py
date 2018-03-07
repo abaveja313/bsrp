@@ -10,6 +10,7 @@ import progressbar
 import warnings
 import time
 from pheno import get_model, predict
+import pprint
 
 warnings.filterwarnings("ignore")
 t0 = time.time()
@@ -90,7 +91,8 @@ def run_model(kinds, biomarkers, adhd_labels, layers, f1=True, graph=False, repo
     for k in kinds:
         classifier = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
         # classifier = SupervisedDBNClassification(hidden_layers_structure=[layers,])
-        X_train, X_test, y_train, y_test = train_test_split(biomarkers[k], adhd_labels, test_size=0.2, shuffle=True)
+        X_train, X_test, y_train, y_test = train_test_split(biomarkers[k], adhd_labels, test_size=0.2,
+                                                            shuffle=True)
         classifier.fit(X_train, y_train)
         print "Training with {0} training samples and {1} test samples".format(len(X_train), len(X_test))
         y_pred = classifier.predict(X_test)
@@ -137,6 +139,7 @@ def draw_graph(kinds, accuracies):
         quit()
 
 
+
 def main(map, layers):
     t0 = time.time()
     masker = get_atlas_data(map)
@@ -160,15 +163,15 @@ def main(map, layers):
 
 
 if __name__ == '__main__':
-    main('sub-maxprob-thr50-2mm', 462)
-    #main('sub-maxprob-thr50-2mm', 136)
+    main('sub-maxprob-thr50-2mm', 461)
+
+
 
 '''
 def main(layers, kinds, biomarkers, adhd_labels):
     accuracies = run_model(kinds, biomarkers, adhd_labels, layers, graph=True,
                            c_matrix=True, print_results=True, f1=True)
     return accuracies
-
 
 if __name__ == '__main__':
     t0 = time.time()
@@ -179,14 +182,14 @@ if __name__ == '__main__':
  
     # kinds = ['correlation', 'partial correlation', 'tangent', 'covariance', 'precision']
     kinds = ['tangent']
-    biomarkers = make_connectivity_biomarkers(kinds, pooled_subjects)
-    layers = [136, 462]
+    biomarkers, labels = make_connectivity_biomarkers(kinds, adhd_labels, adhd_data, adhd_data.func, pooled_subjects)
+    layers = [461, 303, 170, 181, 354, 454]
     mean_f1s = {}
     for layer in layers:
         cv_scores = []
-        for i in range(500):
+        for i in range(100):
             t0 = time.time()
-            accuracies = main(layer, kinds, biomarkers, adhd_labels)
+            accuracies = main(layer, kinds, biomarkers, labels)
             cv_scores.append(accuracies['tangent'])
             print 'ran layer ({0}) iter {1} in {2} seconds'.format(layer, i, time.time() - t0)
         print "= " * 20
