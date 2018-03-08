@@ -3,6 +3,7 @@ import matplotlib.pylab as plt
 from utils import ADHD200, conform_1d
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.neural_network import MLPClassifier
+from sklearn.ensemble import BaggingClassifier
 from nilearn.connectome import ConnectivityMeasure
 from nilearn import datasets, input_data
 from sklearn.metrics import confusion_matrix, classification_report, f1_score, accuracy_score
@@ -11,6 +12,7 @@ import warnings
 import time
 from pheno import get_model, predict
 import pprint
+import pickle
 
 warnings.filterwarnings("ignore")
 t0 = time.time()
@@ -64,25 +66,43 @@ def make_connectivity_biomarkers(kinds, labels, adhd200, func_files, pooled_subj
     model = get_model(tts=0.2)
     new_labels = []
     connectivity_biomarkers = {}
-    for k in kinds:
-        print "Measuring Connectivity for", k
-        conn_measure = ConnectivityMeasure(kind=k, vectorize=True, discard_diagonal=True)
-        connectivity = conn_measure.fit_transform(pooled_subjects)
-        new_x = []
-        for index in range(len(func_files)):
-            probs = predict(model, adhd200, func_files[index])
-            if probs:
-                new_labels.append(labels[index])
-                features = np.array([conform_1d(probs, connectivity[index].shape[0]), connectivity[index]])
-                new_x.append(features)
-            else:
-                print 'no phenotypic information found!'
-                continue
-        d3_dataset = np.array(new_x)
-        nsamples, nx, ny = d3_dataset.shape
-        d2_dataset = d3_dataset.reshape((nsamples, nx * ny))
-        connectivity_biomarkers[k] = d2_dataset
-    return connectivity_biomarkers, new_labels
+    try:
+        with open('biomarkers.pkl', 'rb') as f:
+            biomarkers = pickle.load(f)
+        with open('adhd_labels.pkl', 'rb') as l:
+            adhd_labels = pickle.load(l)
+        return biomarkers, adhd_labels
+    except IOError:
+        print 'error reloading (couldn\'t find pickle file... regenerating data'
+        for k in kinds:
+            print "Measuring Connectivity for", k
+            conn_measure = ConnectivityMeasure(kind=k, vectorize=True, discard_diagonal=True)
+            connectivity = conn_measure.fit_transform(pooled_subjects)
+            print 'Computing Phenotypes...'
+            new_x = []
+            bar = progressbar.ProgressBar(max_value=len(func_files))
+            ops = 0
+            for index in range(len(func_files)):
+                probs = predict(model, adhd200, func_files[index])
+                ops += 1
+                bar.update(ops)
+                if probs:
+                    new_labels.append(labels[index])
+                    features = np.array([conform_1d(probs, connectivity[index].shape[0]), connectivity[index]])
+                    new_x.append(features)
+                else:
+                    print 'no phenotypic information found!'
+                    continue
+            d3_dataset = np.array(new_x)
+            nsamples, nx, ny = d3_dataset.shape
+            d2_dataset = d3_dataset.reshape((nsamples, nx * ny))
+            connectivity_biomarkers[k] = d2_dataset
+        with open('biomarkers.pkl', 'wb') as f:
+            pickle.dump(connectivity_biomarkers, f)
+        with open('adhd_labels.pkl', 'wb') as f:
+            pickle.dump(new_labels, f)
+
+        return connectivity_biomarkers, new_labels
 
 
 def run_model(kinds, biomarkers, adhd_labels, layers, f1=True, graph=False, report=True, c_matrix=False,
@@ -90,6 +110,9 @@ def run_model(kinds, biomarkers, adhd_labels, layers, f1=True, graph=False, repo
     accuracies = {}
     for k in kinds:
         classifier = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
+        # mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
+
+        # classifier = BaggingClassifier(base_estimator=mlp, n_estimators=25, verbose=0)
         # classifier = SupervisedDBNClassification(hidden_layers_structure=[layers,])
         X_train, X_test, y_train, y_test = train_test_split(biomarkers[k], adhd_labels, test_size=0.2,
                                                             shuffle=True)
@@ -139,7 +162,6 @@ def draw_graph(kinds, accuracies):
         quit()
 
 
-
 def main(map, layers):
     t0 = time.time()
     masker = get_atlas_data(map)
@@ -163,9 +185,7 @@ def main(map, layers):
 
 
 if __name__ == '__main__':
-    main('sub-maxprob-thr50-2mm', 461)
-
-
+    main('sub-maxprob-thr50-2mm', 497)
 
 '''
 def main(layers, kinds, biomarkers, adhd_labels):
@@ -173,21 +193,22 @@ def main(layers, kinds, biomarkers, adhd_labels):
                            c_matrix=True, print_results=True, f1=True)
     return accuracies
 
+
 if __name__ == '__main__':
     t0 = time.time()
     masker = get_atlas_data('sub-maxprob-thr50-2mm')
 
     adhd_data = generate_train_data(1.45)
     adhd_subjects, pooled_subjects, site_names, adhd_labels = get_adhd_dataset_info(adhd_data, masker)
- 
+
     # kinds = ['correlation', 'partial correlation', 'tangent', 'covariance', 'precision']
     kinds = ['tangent']
     biomarkers, labels = make_connectivity_biomarkers(kinds, adhd_labels, adhd_data, adhd_data.func, pooled_subjects)
-    layers = [461, 303, 170, 181, 354, 454]
+    layers = range(1, 500)
     mean_f1s = {}
     for layer in layers:
         cv_scores = []
-        for i in range(100):
+        for i in range(32):
             t0 = time.time()
             accuracies = main(layer, kinds, biomarkers, labels)
             cv_scores.append(accuracies['tangent'])
@@ -196,9 +217,13 @@ if __name__ == '__main__':
         # mean_f1s[(layer, layer2)] = [np.mean(cv_scores), np.std(cv_scores), max(cv_scores), min(cv_scores)]
         mean_f1s[layer] = {'mean': np.mean(cv_scores), 'std': np.std(cv_scores), 'max': max(cv_scores),
                            'min': min(cv_scores)}
-        pprint.pprint(mean_f1s)
+        d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean'])
+        d.reverse()
+        pprint.pprint(d)
         print "= " * 20
-    pprint.pprint(mean_f1s)
+    d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean'])
+    d.reverse()
+    pprint.pprint(d)
 
     # with tts as 0.2
 '''
