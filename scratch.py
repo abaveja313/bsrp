@@ -11,11 +11,21 @@ import progressbar
 import warnings
 import time
 from pheno import get_model, predict
-import pprint
 import pickle
 
 warnings.filterwarnings("ignore")
 t0 = time.time()
+
+
+def check_and_get_pickled_data():
+    try:
+        with open('biomarkers.pkl', 'rb') as f:
+            biomarkers = pickle.load(f)
+        with open('adhd_labels.pkl', 'rb') as l:
+            adhd_labels = pickle.load(l)
+        return biomarkers, adhd_labels
+    except IOError:
+        return False, False
 
 
 def generate_train_data(eq):
@@ -63,56 +73,51 @@ def get_adhd_dataset_info(adhd_class, masker):
 
 
 def make_connectivity_biomarkers(kinds, labels, adhd200, func_files, pooled_subjects):
-    model = get_model(tts=0.2)
     new_labels = []
     connectivity_biomarkers = {}
-    try:
-        with open('biomarkers.pkl', 'rb') as f:
-            biomarkers = pickle.load(f)
-        with open('adhd_labels.pkl', 'rb') as l:
-            adhd_labels = pickle.load(l)
-        return biomarkers, adhd_labels
-    except IOError:
-        print 'error reloading (couldn\'t find pickle file... regenerating data'
-        for k in kinds:
-            print "Measuring Connectivity for", k
-            conn_measure = ConnectivityMeasure(kind=k, vectorize=True, discard_diagonal=True)
-            connectivity = conn_measure.fit_transform(pooled_subjects)
-            print 'Computing Phenotypes...'
-            new_x = []
-            bar = progressbar.ProgressBar(max_value=len(func_files))
-            ops = 0
-            for index in range(len(func_files)):
-                probs = predict(model, adhd200, func_files[index])
-                ops += 1
-                bar.update(ops)
-                if probs:
-                    new_labels.append(labels[index])
-                    features = np.array([conform_1d(probs, connectivity[index].shape[0]), connectivity[index]])
-                    new_x.append(features)
-                else:
-                    print 'no phenotypic information found!'
-                    continue
-            d3_dataset = np.array(new_x)
-            nsamples, nx, ny = d3_dataset.shape
-            d2_dataset = d3_dataset.reshape((nsamples, nx * ny))
-            connectivity_biomarkers[k] = d2_dataset
-        with open('biomarkers.pkl', 'wb') as f:
-            pickle.dump(connectivity_biomarkers, f)
-        with open('adhd_labels.pkl', 'wb') as f:
-            pickle.dump(new_labels, f)
+    print 'error reloading (couldn\'t find pickle file... regenerating data'
+    model = get_model(tts=0.2)
+    for k in kinds:
+        print "Measuring Connectivity for", k
+        conn_measure = ConnectivityMeasure(kind=k, vectorize=True, discard_diagonal=True)
+        connectivity = conn_measure.fit_transform(pooled_subjects)
+        print 'Computing Phenotypes...'
+        new_x = []
+        bar = progressbar.ProgressBar(max_value=len(func_files))
+        ops = 0
+        for index in range(len(func_files)):
+            probs = predict(model, adhd200, func_files[index])
+            ops += 1
+            bar.update(ops)
+            if probs:
+                new_labels.append(labels[index])
+                features = np.array([conform_1d(probs, connectivity[index].shape[0]), connectivity[index]])
+                new_x.append(features)
+            else:
+                print 'no phenotypic information found!'
+                continue
+        d3_dataset = np.array(new_x)
+        nsamples, nx, ny = d3_dataset.shape
+        d2_dataset = d3_dataset.reshape((nsamples, nx * ny))
+        connectivity_biomarkers[k] = d2_dataset
 
-        return connectivity_biomarkers, new_labels
+    with open('biomarkers.pkl', 'wb') as bmks_file:
+        pickle.dump(connectivity_biomarkers, bmks_file)
+
+    with open('adhd_labels.pkl', 'wb') as lbls_file:
+        pickle.dump(new_labels, lbls_file)
+
+    return connectivity_biomarkers, new_labels
 
 
 def run_model(kinds, biomarkers, adhd_labels, layers, f1=True, graph=False, report=True, c_matrix=False,
               print_results=False):
     accuracies = {}
     for k in kinds:
-        classifier = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
+        mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
         # mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
 
-        # classifier = BaggingClassifier(base_estimator=mlp, n_estimators=25, verbose=0)
+        classifier = BaggingClassifier(base_estimator=mlp, n_estimators=500, verbose=8)
         # classifier = SupervisedDBNClassification(hidden_layers_structure=[layers,])
         X_train, X_test, y_train, y_test = train_test_split(biomarkers[k], adhd_labels, test_size=0.2,
                                                             shuffle=True)
@@ -164,22 +169,24 @@ def draw_graph(kinds, accuracies):
 
 def main(map, layers):
     t0 = time.time()
-    masker = get_atlas_data(map)
-
-    adhd_data = generate_train_data(1.45)
-    adhd_subjects, pooled_subjects, site_names, o_adhd_labels = get_adhd_dataset_info(adhd_data, masker)
-
-    # kinds = ['correlation', 'partial correlation', 'tangent', 'covariance', 'precision']
     kinds = ['tangent']
-    biomarkers, adhd_labels = make_connectivity_biomarkers(kinds, o_adhd_labels, adhd_data, adhd_data.func,
-                                                           pooled_subjects)
+    pickled_bmks, pickled_lbls = check_and_get_pickled_data()
+    if not pickled_bmks:
+        masker = get_atlas_data(map)
+
+        adhd_data = generate_train_data(1.45)
+        adhd_subjects, pooled_subjects, site_names, o_adhd_labels = get_adhd_dataset_info(adhd_data, masker)
+
+        # kinds = ['correlation', 'partial correlation', 'tangent', 'covariance', 'precision']
+        biomarkers, adhd_labels = make_connectivity_biomarkers(kinds, o_adhd_labels, adhd_data, adhd_data.func,
+                                                               pooled_subjects)
+    else:
+        biomarkers, adhd_labels = pickled_bmks, pickled_lbls
 
     accuracies = run_model(kinds, biomarkers, adhd_labels, layers, graph=True,
                            c_matrix=True, print_results=True, f1=True)
+
     accuracies = accuracies.values()
-    print 'accuracies', accuracies
-    print 'mean', np.mean(accuracies)
-    print 'std', np.std(accuracies)
     print "ran model", time.time() - t0, 'seconds'
     return accuracies
 
