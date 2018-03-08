@@ -1,6 +1,4 @@
-from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import BaggingClassifier, VotingClassifier, ExtraTreesClassifier
-from sklearn.tree import ExtraTreeClassifier
+from sklearn.ensemble import BaggingClassifier, ExtraTreesClassifier
 from utils import ADHD200
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -22,7 +20,7 @@ def get_model(tts=0.2):
     # clf = GaussianNB()
     mclf = ExtraTreesClassifier(n_estimators=25, warm_start=True)
     # vclf = VotingClassifier(estimators=[('gnb', gnb), ('etc', etc)], voting='soft', weights=[1.675, 1])
-    clf = BaggingClassifier(base_estimator=mclf, verbose=8, n_estimators=500, random_state=0)
+    clf = BaggingClassifier(base_estimator=mclf, verbose=8, n_estimators=750, random_state=0)
     clf.fit(X_train, y_train)
 
     print 'Pheno Classification Accuracy:'
@@ -50,4 +48,3 @@ def predict(clf, adhd200, func_file):
 
 
 # y_pred = clf.predict_proba(X_test)
-model = get_model(tts=0.2)
