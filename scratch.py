@@ -3,7 +3,7 @@ import matplotlib.pylab as plt
 from utils import ADHD200, conform_1d
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import BaggingClassifier, AdaBoostClassifier
 from nilearn.connectome import ConnectivityMeasure
 from nilearn import datasets, input_data
 from sklearn.metrics import confusion_matrix, classification_report, f1_score, accuracy_score
@@ -117,7 +117,7 @@ def run_model(kinds, biomarkers, adhd_labels, layers, f1=True, graph=False, repo
         mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
         # mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
 
-        classifier = BaggingClassifier(base_estimator=mlp, n_estimators=500, verbose=8)
+        classifier = BaggingClassifier(base_estimator=mlp,  n_estimators=500, verbose=10)
         # classifier = SupervisedDBNClassification(hidden_layers_structure=[layers,])
         X_train, X_test, y_train, y_test = train_test_split(biomarkers[k], adhd_labels, test_size=0.2,
                                                             shuffle=True)
@@ -194,43 +194,3 @@ def main(map, layers):
 if __name__ == '__main__':
     main('sub-maxprob-thr50-2mm', 497)
 
-'''
-def main(layers, kinds, biomarkers, adhd_labels):
-    accuracies = run_model(kinds, biomarkers, adhd_labels, layers, graph=True,
-                           c_matrix=True, print_results=True, f1=True)
-    return accuracies
-
-
-if __name__ == '__main__':
-    t0 = time.time()
-    masker = get_atlas_data('sub-maxprob-thr50-2mm')
-
-    adhd_data = generate_train_data(1.45)
-    adhd_subjects, pooled_subjects, site_names, adhd_labels = get_adhd_dataset_info(adhd_data, masker)
-
-    # kinds = ['correlation', 'partial correlation', 'tangent', 'covariance', 'precision']
-    kinds = ['tangent']
-    biomarkers, labels = make_connectivity_biomarkers(kinds, adhd_labels, adhd_data, adhd_data.func, pooled_subjects)
-    layers = range(1, 500)
-    mean_f1s = {}
-    for layer in layers:
-        cv_scores = []
-        for i in range(32):
-            t0 = time.time()
-            accuracies = main(layer, kinds, biomarkers, labels)
-            cv_scores.append(accuracies['tangent'])
-            print 'ran layer ({0}) iter {1} in {2} seconds'.format(layer, i, time.time() - t0)
-        print "= " * 20
-        # mean_f1s[(layer, layer2)] = [np.mean(cv_scores), np.std(cv_scores), max(cv_scores), min(cv_scores)]
-        mean_f1s[layer] = {'mean': np.mean(cv_scores), 'std': np.std(cv_scores), 'max': max(cv_scores),
-                           'min': min(cv_scores)}
-        d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean'])
-        d.reverse()
-        pprint.pprint(d)
-        print "= " * 20
-    d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean'])
-    d.reverse()
-    pprint.pprint(d)
-
-    # with tts as 0.2
-'''
