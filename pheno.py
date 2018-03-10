@@ -1,8 +1,10 @@
-from sklearn.ensemble import BaggingClassifier, ExtraTreesClassifier
+from sklearn.ensemble import ExtraTreesClassifier
 from utils import ADHD200
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
+from deep_forest.gcforest import MGCForest
+from deep_forest.gc_utils import estimator_config
 
 
 # best is extra trees
@@ -15,13 +17,17 @@ def get_model(tts=0.2):
     X = scaler.transform(X)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=tts)
-    print 'training = {0} samples\ntesting = {1} samples'.format(len(X_train), len(y_test)
-                                                                 )
+    print 'training = {0} samples\ntesting = {1} samples'.format(len(X_train), len(y_test))
+    clf = MGCForest(
+        estimators_config=estimator_config,
+        stride_ratios=[1.0 / 4, 1.0 / 9, 1.0 / 16]
+    )
     # clf = GaussianNB()
-    mclf = ExtraTreesClassifier(n_estimators=25, warm_start=True)
-    # vclf = VotingClassifier(estimators=[('gnb', gnb), ('etc', etc)], voting='soft', weights=[1.675, 1])
-    clf = BaggingClassifier(base_estimator=mclf, verbose=8, n_estimators=750, random_state=0)
     clf.fit(X_train, y_train)
+    # mclf = ExtraTreesClassifier(n_estimators=25, warm_start=True)
+    # vclf = VotingClassifier(estimators=[('gnb', gnb), ('etc', etc)], voting='soft', weights=[1.675, 1])
+    # clf = BaggingClassifier(base_estimator=mclf, verbose=8, n_estimators=750, random_state=0)
+    # mgc_forest.fit(X_train, y_train)
 
     print 'Pheno Classification Accuracy:'
     y_pred = clf.predict(X_test)
@@ -48,3 +54,4 @@ def predict(clf, adhd200, func_file):
 
 
 # y_pred = clf.predict_proba(X_test)
+get_model(0.2)
