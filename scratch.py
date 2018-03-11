@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pylab as plt
-from utils import ADHD200, conform_1d
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import BaggingClassifier, AdaBoostClassifier
+from utils import ADHD200, conform_1d, get_gc_config
+from sklearn.model_selection import train_test_split
+from gcforest.gcforest import GCForest
 from nilearn.connectome import ConnectivityMeasure
 from nilearn import datasets, input_data
 from sklearn.metrics import confusion_matrix, classification_report, f1_score, accuracy_score
@@ -23,6 +22,7 @@ def check_and_get_pickled_data():
             biomarkers = pickle.load(f)
         with open('adhd_labels.pkl', 'rb') as l:
             adhd_labels = pickle.load(l)
+        print "Loaded Pickled Phenotypic info"
         return biomarkers, adhd_labels
     except IOError:
         return False, False
@@ -114,14 +114,14 @@ def run_model(kinds, biomarkers, adhd_labels, layers, f1=True, graph=False, repo
               print_results=False):
     accuracies = {}
     for k in kinds:
-        mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
+        #mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
         # mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
-
-        classifier = BaggingClassifier(base_estimator=mlp,  n_estimators=500, verbose=10)
+        classifier = GCForest(config=get_gc_config())
+        #classifier = BaggingClassifier(base_estimator=mlp,  n_estimators=500, verbose=10)
         # classifier = SupervisedDBNClassification(hidden_layers_structure=[layers,])
         X_train, X_test, y_train, y_test = train_test_split(biomarkers[k], adhd_labels, test_size=0.2,
                                                             shuffle=True)
-        classifier.fit(X_train, y_train)
+        classifier.fit_transform(np.array(X_train), np.array(y_train))
         print "Training with {0} training samples and {1} test samples".format(len(X_train), len(X_test))
         y_pred = classifier.predict(X_test)
         accuracies[k] = f1_score(y_test, y_pred)
@@ -171,7 +171,7 @@ def main(map, layers):
     t0 = time.time()
     kinds = ['tangent']
     pickled_bmks, pickled_lbls = check_and_get_pickled_data()
-    if not pickled_bmks:
+    if not pickled_bmks or not pickled_lbls:
         masker = get_atlas_data(map)
 
         adhd_data = generate_train_data(1.45)
