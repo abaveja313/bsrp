@@ -223,21 +223,49 @@ def conform_1d(value, target):
     new_array[0] = value
     return np.array(new_array)
 
-'''
-a = ADHD200()
-a.unzip_files('NYU')
-a.unzip_files('OHSU')
-a.unzip_files('Peking')
-a.unzip_files('Pittsburgh')
-a.unzip_files('WashU')
-a.unzip_files('KKI')
-a.unzip_files('NeuroIMAGE')
-a.unzip_files('KKI', train=False)
-a.unzip_files('NeuroIMAGE', train=False)
-a.unzip_files('OHSU', train=False)
-a.unzip_files('Peking', train=False)
 
-'''
+def get_gc_config():
+    config = {}
+    ca_config = {}
+    ca_config["random_state"] = 0
+    ca_config["max_layers"] = 200
+    ca_config["early_stopping_rounds"] = 3
+    ca_config["n_classes"] = 2
+    ca_config["estimators"] = []
+    ca_config["estimators"].append(
+        {"n_folds": 5,
+         "type": "XGBClassifier",
+         "n_estimators": 20,
+         "max_depth": 5,
+         "objective": "multi:softprob",
+         "silent": True,
+         "nthread": -1,
+         "learning_rate": 0.1,
+         "num_class": 2
+         }
+    )
+
+    ca_config["estimators"].append(
+        {"n_folds": 5,
+         "type": "RandomForestClassifier",
+         "n_estimators": 50,  # 50 is fantastic
+         "max_depth": None,
+         "n_jobs": -1
+         }
+    )
+
+    ca_config["estimators"].append(
+        {"n_folds": 5,
+         "type": "RandomForestClassifier",
+         "n_estimators": 55,
+         "max_depth": None,
+         "n_jobs": -1
+         }
+    )
+
+    ca_config["estimators"].append({"n_folds": 5, "type": "LogisticRegression"})
+    config["cascade"] = ca_config
+    return config
 
 
 class EstimatorSelectionHelper:
@@ -282,44 +310,3 @@ class EstimatorSelectionHelper:
         columns = columns + [c for c in df.columns if c not in columns]
 
         return df[columns]
-
-'''
-def main(layers, kinds, biomarkers, adhd_labels):
-    accuracies = run_model(kinds, biomarkers, adhd_labels, layers, graph=True,
-                           c_matrix=True, print_results=True, f1=True)
-    return accuracies
-
-
-if __name__ == '__main__':
-    t0 = time.time()
-    masker = get_atlas_data('sub-maxprob-thr50-2mm')
-
-    adhd_data = generate_train_data(1.45)
-    adhd_subjects, pooled_subjects, site_names, adhd_labels = get_adhd_dataset_info(adhd_data, masker)
-
-    # kinds = ['correlation', 'partial correlation', 'tangent', 'covariance', 'precision']
-    kinds = ['tangent']
-    biomarkers, labels = make_connectivity_biomarkers(kinds, adhd_labels, adhd_data, adhd_data.func, pooled_subjects)
-    layers = range(1, 500)
-    mean_f1s = {}
-    for layer in layers:
-        cv_scores = []
-        for i in range(32):
-            t0 = time.time()
-            accuracies = main(layer, kinds, biomarkers, labels)
-            cv_scores.append(accuracies['tangent'])
-            print 'ran layer ({0}) iter {1} in {2} seconds'.format(layer, i, time.time() - t0)
-        print "= " * 20
-        # mean_f1s[(layer, layer2)] = [np.mean(cv_scores), np.std(cv_scores), max(cv_scores), min(cv_scores)]
-        mean_f1s[layer] = {'mean': np.mean(cv_scores), 'std': np.std(cv_scores), 'max': max(cv_scores),
-                           'min': min(cv_scores)}
-        d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean'])
-        d.reverse()
-        pprint.pprint(d)
-        print "= " * 20
-    d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean'])
-    d.reverse()
-    pprint.pprint(d)
-
-    # with tts as 0.2
-'''
