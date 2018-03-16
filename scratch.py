@@ -11,9 +11,13 @@ import warnings
 import time
 from pheno import get_model, predict
 import pickle
+import logging
+import pprint
 
 warnings.filterwarnings("ignore")
 t0 = time.time()
+
+logging.getLogger().setLevel(logging.WARNING)
 
 
 def check_and_get_pickled_data():
@@ -110,14 +114,15 @@ def make_connectivity_biomarkers(kinds, labels, adhd200, func_files, pooled_subj
     return connectivity_biomarkers, new_labels
 
 
-def run_model(kinds, biomarkers, adhd_labels, layers, f1=True, graph=False, report=True, c_matrix=False,
+def run_model(kinds, biomarkers, adhd_labels, est1, f1=True, graph=False, report=True, c_matrix=False,
               print_results=False):
     accuracies = {}
+    accuracies_a = {}
     for k in kinds:
-        #mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
         # mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
-        classifier = GCForest(config=get_gc_config())
-        #classifier = BaggingClassifier(base_estimator=mlp,  n_estimators=500, verbose=10)
+        # mlp = MLPClassifier(hidden_layer_sizes=(layers,), solver='lbfgs', verbose=0, random_state=0)
+        classifier = GCForest(config=get_gc_config(est1))
+        # classifier = BaggingClassifier(base_estimator=mlp,  n_estimators=500, verbose=10)
         # classifier = SupervisedDBNClassification(hidden_layers_structure=[layers,])
         X_train, X_test, y_train, y_test = train_test_split(biomarkers[k], adhd_labels, test_size=0.2,
                                                             shuffle=True)
@@ -150,6 +155,7 @@ def run_model(kinds, biomarkers, adhd_labels, layers, f1=True, graph=False, repo
         return accuracies
 
 
+
 def draw_graph(kinds, accuracies):
     x = raw_input('\nWould you like to see a graph?\n')
     if x.lower() in ['y', 'yes']:
@@ -167,7 +173,8 @@ def draw_graph(kinds, accuracies):
         quit()
 
 
-def main(map, layers):
+
+def main(map):
     t0 = time.time()
     kinds = ['tangent']
     pickled_bmks, pickled_lbls = check_and_get_pickled_data()
@@ -183,14 +190,45 @@ def main(map, layers):
     else:
         biomarkers, adhd_labels = pickled_bmks, pickled_lbls
 
-    accuracies = run_model(kinds, biomarkers, adhd_labels, layers, graph=True,
+    accuracies = run_model(kinds, biomarkers, adhd_labels, 8, graph=True,
                            c_matrix=True, print_results=True, f1=True)
 
     accuracies = accuracies.values()
+    print 'accuracies', accuracies
     print "ran model", time.time() - t0, 'seconds'
     return accuracies
 
 
 if __name__ == '__main__':
-    main('sub-maxprob-thr50-2mm', 497)
+    main('sub-maxprob-thr50-2mm')
 
+'''
+import time
+import pprint
+
+# y_pred = clf.predict_proba(X_test)
+biomarkers, labels = check_and_get_pickled_data()
+layers = range(0, 300)[1:]
+mean_f1s = {}
+for layer in layers:
+    cv_scores = []
+    dc_scores = []
+    for i in range(5):
+        t0 = time.time()
+        accuracy, bac = run_model(['tangent'], biomarkers, labels, layer)
+        cv_scores.append(accuracy['tangent'])
+        dc_scores.append(bac['tangent'])
+        print 'ran estim ({0}) iter {1} in {2} seconds'.format(layer, i, time.time() - t0)
+    print "= " * 20
+    # mean_f1s[(layer, layer2)] = [np.mean(cv_scores), np.std(cv_scores), max(cv_scores), min(cv_scores)]
+    mean_f1s[layer] = {'mean_f1': np.mean(cv_scores), 'std_f1': np.std(cv_scores), 'max_f1': max(cv_scores),
+                       'min_f1': min(cv_scores), 'mean_accuracy': np.mean(dc_scores), 'std_accuracy': np.std(dc_scores),
+                       'max_accuracy': max(dc_scores), 'min_acccuracy': min(dc_scores)}
+    d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean_accuracy'])
+    d.reverse()
+    pprint.pprint(d)
+    print "= " * 20
+d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean_f1'])
+d.reverse()
+pprint.pprint(d)
+'''

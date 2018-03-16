@@ -224,19 +224,20 @@ def conform_1d(value, target):
     return np.array(new_array)
 
 
-def get_gc_config():
+# TODO RUN PARAM OPTIMZER FOR F1-SCORE
+def get_gc_config(est1):
     config = {}
     ca_config = {}
     ca_config["random_state"] = 0
     ca_config["max_layers"] = 200
-    ca_config["early_stopping_rounds"] = 3
+    ca_config["early_stopping_rounds"] = 2
     ca_config["n_classes"] = 2
     ca_config["estimators"] = []
     ca_config["estimators"].append(
         {"n_folds": 5,
          "type": "XGBClassifier",
-         "n_estimators": 20,
-         "max_depth": 5,
+         "n_estimators": 30,
+         "max_depth": 10,
          "objective": "multi:softprob",
          "silent": True,
          "nthread": -1,
@@ -248,7 +249,7 @@ def get_gc_config():
     ca_config["estimators"].append(
         {"n_folds": 5,
          "type": "RandomForestClassifier",
-         "n_estimators": 50,  # 50 is fantastic
+         "n_estimators": est1,  # MODEK_PHENO1=50, MODEL_PHENO2 = 256
          "max_depth": None,
          "n_jobs": -1
          }
@@ -257,7 +258,7 @@ def get_gc_config():
     ca_config["estimators"].append(
         {"n_folds": 5,
          "type": "RandomForestClassifier",
-         "n_estimators": 55,
+         "n_estimators": est1,
          "max_depth": None,
          "n_jobs": -1
          }
