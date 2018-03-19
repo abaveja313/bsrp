@@ -126,10 +126,15 @@ def run_model(kinds, biomarkers, adhd_labels, est1, f1=True, graph=False, report
         # classifier = SupervisedDBNClassification(hidden_layers_structure=[layers,])
         X_train, X_test, y_train, y_test = train_test_split(biomarkers[k], adhd_labels, test_size=0.2,
                                                             shuffle=True)
+
         classifier.fit_transform(np.array(X_train), np.array(y_train))
         print "Training with {0} training samples and {1} test samples".format(len(X_train), len(X_test))
+        print 'Layers', est1
         y_pred = classifier.predict(X_test)
         accuracies[k] = f1_score(y_test, y_pred)
+        accuracies_a[k] = accuracy_score(y_test, y_pred)
+        # return accuracies, accuracies_a
+
         if c_matrix:
             print '-' * 30
             print "Kind:", k
@@ -152,19 +157,18 @@ def run_model(kinds, biomarkers, adhd_labels, est1, f1=True, graph=False, report
         print '\nF1 Scores'
         print accuracies
     if graph:
-        return accuracies
+        return accuracies, accuracies_a
 
 
-
-def draw_graph(kinds, accuracies):
+def draw_graph(labels, accuracies):
     x = raw_input('\nWould you like to see a graph?\n')
     if x.lower() in ['y', 'yes']:
         plt.figure(figsize=(6, 4))
-        positions = np.arange(len(kinds)) * .1 + .1
+        positions = np.arange(len(labels)) * .1 + .1
         plt.barh(positions, accuracies, align='center', height=.05)
-        yticks = [kind.replace(' ', '\n') for kind in kinds]
+        yticks = [label.replace(' ', '\n') for label in labels]
         plt.yticks(positions, yticks)
-        plt.xlabel('Max F1 Scores')
+        plt.xlabel('Model Results')
         plt.grid(True)
         plt.tight_layout()
 
@@ -173,8 +177,7 @@ def draw_graph(kinds, accuracies):
         quit()
 
 
-
-def main(map):
+def main(map, est):
     t0 = time.time()
     kinds = ['tangent']
     pickled_bmks, pickled_lbls = check_and_get_pickled_data()
@@ -190,17 +193,16 @@ def main(map):
     else:
         biomarkers, adhd_labels = pickled_bmks, pickled_lbls
 
-    accuracies = run_model(kinds, biomarkers, adhd_labels, 8, graph=True,
+    accuracies, accuracies_a = run_model(kinds, biomarkers, adhd_labels, est, graph=True,
                            c_matrix=True, print_results=True, f1=True)
-
-    accuracies = accuracies.values()
     print 'accuracies', accuracies
+    print 'f1s', accuracies_a
     print "ran model", time.time() - t0, 'seconds'
     return accuracies
 
 
 if __name__ == '__main__':
-    main('sub-maxprob-thr50-2mm')
+    main('sub-maxprob-thr50-2mm', 50)
 
 '''
 import time
@@ -208,12 +210,12 @@ import pprint
 
 # y_pred = clf.predict_proba(X_test)
 biomarkers, labels = check_and_get_pickled_data()
-layers = range(0, 300)[1:]
+layers = [65, 150, 108, 237, 247, 195, 104, 197, 64, 168, 61]
 mean_f1s = {}
 for layer in layers:
     cv_scores = []
     dc_scores = []
-    for i in range(5):
+    for i in range(14 ):
         t0 = time.time()
         accuracy, bac = run_model(['tangent'], biomarkers, labels, layer)
         cv_scores.append(accuracy['tangent'])
@@ -224,7 +226,7 @@ for layer in layers:
     mean_f1s[layer] = {'mean_f1': np.mean(cv_scores), 'std_f1': np.std(cv_scores), 'max_f1': max(cv_scores),
                        'min_f1': min(cv_scores), 'mean_accuracy': np.mean(dc_scores), 'std_accuracy': np.std(dc_scores),
                        'max_accuracy': max(dc_scores), 'min_acccuracy': min(dc_scores)}
-    d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean_accuracy'])
+    d = sorted(mean_f1s.iteritems(), key=lambda (x, y): y['mean_f1'])
     d.reverse()
     pprint.pprint(d)
     print "= " * 20

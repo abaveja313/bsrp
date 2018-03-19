@@ -3,8 +3,7 @@ from utils import ADHD200
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
-from nolearn.dbn import DBN
-from sklearn.neural_network import MLPClassifier
+from sklearn.ensemble import ExtraTreesClassifier, BaggingClassifier
 
 
 # best is extra trees
@@ -17,9 +16,9 @@ def get_model(tts=0.2):
     X = scaler.transform(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=tts)
     print 'training = {0} samples\ntesting = {1} samples'.format(len(X_train), len(y_test))
-    clf = DBN() #50 #11
-    # mclf = ExtraTreesClassifier(n_estimators=25, warm_start=True)
-    # clf = BaggingClassifier(base_estimator=mclf, verbose=8, n_estimators=750, random_state=0)
+    # clf = DBN() #50 #11
+    mclf = ExtraTreesClassifier(n_estimators=25, warm_start=True)
+    clf = BaggingClassifier(base_estimator=mclf, verbose=8, n_estimators=150, random_state=0)
     clf.fit(X_train, y_train)
 
     print 'Pheno Classification Accuracy:'
@@ -37,11 +36,10 @@ def predict(clf, adhd200, func_file):
     if X:
         probs = clf.predict_proba(np.array([X]))
         out = clf.predict(np.array([X]))
+        print out
         if out == 1:
             return probs[0][1]
         else:
             return probs[0][0]
     else:
         return False
-
-

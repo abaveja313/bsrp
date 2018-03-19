@@ -230,19 +230,20 @@ def get_gc_config(est1):
     ca_config = {}
     ca_config["random_state"] = 0
     ca_config["max_layers"] = 200
-    ca_config["early_stopping_rounds"] = 2
+    ca_config["early_stopping_rounds"] = 3
     ca_config["n_classes"] = 2
     ca_config["estimators"] = []
     ca_config["estimators"].append(
         {"n_folds": 5,
          "type": "XGBClassifier",
-         "n_estimators": 30,
-         "max_depth": 10,
+         "n_estimators": 20,
+         "max_depth": 15,
          "objective": "multi:softprob",
          "silent": True,
          "nthread": -1,
          "learning_rate": 0.1,
-         "num_class": 2
+         "num_class": 2,
+
          }
     )
 
@@ -251,20 +252,20 @@ def get_gc_config(est1):
          "type": "RandomForestClassifier",
          "n_estimators": est1,  # MODEK_PHENO1=50, MODEL_PHENO2 = 256
          "max_depth": None,
-         "n_jobs": -1
+         "n_jobs": -1,
          }
     )
-
     ca_config["estimators"].append(
         {"n_folds": 5,
          "type": "RandomForestClassifier",
          "n_estimators": est1,
          "max_depth": None,
-         "n_jobs": -1
+         "n_jobs": -1,
+
          }
     )
 
-    ca_config["estimators"].append({"n_folds": 5, "type": "LogisticRegression"})
+    ca_config["estimators"].append({"n_folds": 4, "type": "LogisticRegression"})
     config["cascade"] = ca_config
     return config
 
