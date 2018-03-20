@@ -133,7 +133,7 @@ def run_model(kinds, biomarkers, adhd_labels, est1, f1=True, graph=False, report
         y_pred = classifier.predict(X_test)
         accuracies[k] = f1_score(y_test, y_pred)
         accuracies_a[k] = accuracy_score(y_test, y_pred)
-        # return accuracies, accuracies_a
+        #return accuracies, accuracies_a
 
         if c_matrix:
             print '-' * 30
@@ -176,7 +176,6 @@ def draw_graph(labels, accuracies):
     else:
         quit()
 
-
 def main(map, est):
     t0 = time.time()
     kinds = ['tangent']
@@ -202,7 +201,7 @@ def main(map, est):
 
 
 if __name__ == '__main__':
-    main('sub-maxprob-thr50-2mm', 50)
+    main('sub-maxprob-thr50-2mm', 108)
 
 '''
 import time
@@ -210,12 +209,12 @@ import pprint
 
 # y_pred = clf.predict_proba(X_test)
 biomarkers, labels = check_and_get_pickled_data()
-layers = [65, 150, 108, 237, 247, 195, 104, 197, 64, 168, 61]
+layers = range(0, 250)[1:]
 mean_f1s = {}
 for layer in layers:
     cv_scores = []
     dc_scores = []
-    for i in range(14 ):
+    for i in range(4):
         t0 = time.time()
         accuracy, bac = run_model(['tangent'], biomarkers, labels, layer)
         cv_scores.append(accuracy['tangent'])

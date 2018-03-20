@@ -18,7 +18,7 @@ def get_model(tts=0.2):
     print 'training = {0} samples\ntesting = {1} samples'.format(len(X_train), len(y_test))
     # clf = DBN() #50 #11
     mclf = ExtraTreesClassifier(n_estimators=25, warm_start=True)
-    clf = BaggingClassifier(base_estimator=mclf, verbose=8, n_estimators=150, random_state=0)
+    clf = BaggingClassifier(base_estimator=mclf, verbose=4, n_estimators=125, random_state=0)
     clf.fit(X_train, y_train)
 
     print 'Pheno Classification Accuracy:'
