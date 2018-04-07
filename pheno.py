@@ -1,5 +1,5 @@
 import numpy as np
-from utils import ADHD200
+from utils import ADHD200, conform_1d
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
@@ -17,7 +17,7 @@ def get_model(tts=0.2):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=tts)
     print 'training = {0} samples\ntesting = {1} samples'.format(len(X_train), len(y_test))
     # clf = DBN() #50 #11
-    mclf = ExtraTreesClassifier(n_estimators=25, warm_start=True)
+    mclf = ExtraTreesClassifier(n_estimators=30, warm_start=True)
     clf = BaggingClassifier(base_estimator=mclf, verbose=4, n_estimators=125, random_state=0)
     clf.fit(X_train, y_train)
 
@@ -40,6 +40,12 @@ def predict(clf, adhd200, func_file):
         if out == 1:
             return probs[0][1]
         else:
-            return probs[0][0]
+            return -1 * probs[0][0]
     else:
         return False
+
+def get_params(adhd200, func_file):
+    X = adhd200.retrieve_pheno_for_model(func_file)
+    if X:
+        return X
+    return None
