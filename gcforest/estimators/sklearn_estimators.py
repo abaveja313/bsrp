@@ -47,6 +47,30 @@ class GCExtraTreesClassifier(SKlearnBaseClassifier):
         return forest_predict_batch_size(clf, X)
 
 
+class GCSVC(SKlearnBaseClassifier):
+    def __init__(self, name, kwargs):
+        from sklearn.svm import SVC
+        super(GCSVC, self).__init__(name, SVC, kwargs)
+
+
+class GCDBN(SKlearnBaseClassifier):
+    def __init__(self, name, kwargs):
+        from dbn.tensorflow import SupervisedDBNClassification
+        super(GCDBN, self).__init__(name, SupervisedDBNClassification, {})
+
+
+class GCGaussian(SKlearnBaseClassifier):
+    def __init__(self, name, kwargs):
+        from sklearn.naive_bayes import GaussianNB
+        super(GCGaussian, self).__init__(name, GaussianNB, {})
+
+
+class GCMLP(SKlearnBaseClassifier):
+    def __init__(self, name, kwargs):
+        from sklearn.neural_network import MLPClassifier
+        super(GCMLP, self).__init__(name, MLPClassifier, kwargs)
+
+
 class GCRandomForestClassifier(SKlearnBaseClassifier):
     def __init__(self, name, kwargs):
         from sklearn.ensemble import RandomForestClassifier

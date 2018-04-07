@@ -79,7 +79,7 @@ class ADHD200(object):
             self.test_pheno.append(df[df['Subject'] == id].values.tolist())
         return [df[df['Subject'] == id], df[df['Subject'] == id]['Group']]
 
-    def gen_data(self, eq=1, train=True):
+    def gen_data(self, train=True):
         temp_func = []
         temp_pheno = []
         temp_sites = []
@@ -218,36 +218,93 @@ class TestADHD200:
         self.site_names = adhd200Obj.test_site_names
 
 
-def conform_1d(value, target):
+def conform_1d(vals, target):
     new_array = [0] * target
-    new_array[0] = value
+    for i in range(0, len(vals)):
+        new_array[i] = vals[i]
     return np.array(new_array)
 
 
+fieldnames = ['mlp_layesr', 'mlp_solver', 'logistic_regressions', 'svc_kernel', 'xgb_estimators',
+              'early_stopping_iterations', 'positions', 'mean_accuracy', 'max_accuracy', 'min_accuracy',
+              'std_accuracy', 'mean_f1', 'max_f1', 'min_f1', 'std_f1', 'mean_precision', 'max_precision',
+              'min_precision', 'std_precision', 'mean_recall', 'max_recall', 'min_recall', 'std_recall']
+
+
+def merge_two_dicts(x, y):
+    """Given two dicts, merge them into a new dict as a shallow copy."""
+    z = x.copy()
+    z.update(y)
+    return z
+
+
 # TODO RUN PARAM OPTIMZER FOR F1-SCORE
-def get_gc_config(est1):
+def get_gc_config(mlp_layer, mlp_solver, number_logistic, svc_kernel, num_xgb_estim, early_stopping_rounds, positions):
     config = {}
     ca_config = {}
     ca_config["random_state"] = 0
-    ca_config["max_layers"] = 200
-    ca_config["early_stopping_rounds"] = 3
+    ca_config["max_layers"] = 1000
+    ca_config["early_stopping_rounds"] = early_stopping_rounds
     ca_config["n_classes"] = 2
-    ca_config["estimators"] = []
-    ca_config["estimators"].append(
-        {"n_folds": 5,
-         "type": "XGBClassifier",
-         "n_estimators": 20,
-         "max_depth": 15,
-         "objective": "multi:softprob",
-         "silent": True,
-         "nthread": -1,
-         "learning_rate": 0.1,
-         "num_class": 2,
+    estimators_to_append = []
+    ca_config["estimators"] = [0] * 6
 
-         }
-    )
+    if mlp_layer and mlp_solver:
+        estimators_to_append.append(
+            {
+                "n_folds": 4,
+                "type": "MLPClassifier",
+                "hidden_layer_sizes": mlp_layer,
+                "random_state": 0,
+                'solver': mlp_solver
+            }
+        )
 
-    ca_config["estimators"].append(
+    for _ in range(number_logistic[0]):
+        estimators_to_append.append({"n_folds": 4, "type": "LogisticRegression"})
+
+    if num_xgb_estim:
+        estimators_to_append.append(
+            {"n_folds": 5,
+             "type": "XGBClassifier",
+             "n_estimators": num_xgb_estim,
+             "objective": "multi:softprob",
+             "silent": True,
+             "nthread": -1,
+             "num_class": 2,
+
+             }
+        )
+
+    for _ in range(number_logistic[1]):
+        estimators_to_append.append({"n_folds": 4, "type": "LogisticRegression"})
+
+    if svc_kernel:
+        estimators_to_append.append(
+            {
+                "n_folds": 4,
+                "type": "SVC",
+                "random_state": 0,
+                "kernel": type,
+                "probability": True
+            }
+        )
+
+    estimators_to_append.append({"n_folds": 4, "type": "LogisticRegression"})
+    if positions:
+        for index, value in enumerate(estimators_to_append):
+            ca_config['estimators'][positions.index(index)] = value
+    else:
+        ca_config['estimators'] = estimators_to_append
+
+    print 'Using config', ca_config
+
+    config["cascade"] = ca_config
+    return config
+
+
+'''
+    ca_config["estimators"].append( # 5 rf estimators gives 73%?
         {"n_folds": 5,
          "type": "RandomForestClassifier",
          "n_estimators": est1,  # MODEK_PHENO1=50, MODEL_PHENO2 = 256
@@ -255,60 +312,15 @@ def get_gc_config(est1):
          "n_jobs": -1,
          }
     )
-    ca_config["estimators"].append(
+      ca_config["estimators"].append(
         {"n_folds": 5,
-         "type": "RandomForestClassifier",
-         "n_estimators": est1,
-         "max_depth": None,
-         "n_jobs": -1,
+         "type": "XGBClassifier",
+         "n_estimators": d,
+         "objective": "multi:softprob",
+         "silent": True,
+         "nthread": -1,
+         "num_class": 2,
 
          }
     )
-
-    ca_config["estimators"].append({"n_folds": 4, "type": "LogisticRegression"})
-    config["cascade"] = ca_config
-    return config
-
-
-class EstimatorSelectionHelper:
-    def __init__(self, models, params):
-        if not set(models.keys()).issubset(set(params.keys())):
-            missing_params = list(set(models.keys()) - set(params.keys()))
-            raise ValueError("Some estimators are missing parameters: %s" % missing_params)
-        self.models = models
-        self.params = params
-        self.keys = models.keys()
-        self.grid_searches = {}
-
-    def fit(self, X, y, cv=3, n_jobs=1, verbose=1, scoring=None, refit=False):
-        for key in self.keys:
-            print("Running GridSearchCV for %s." % key)
-            model = self.models[key]
-            params = self.params[key]
-            # gs = GridSearchCV(model, params, cv=cv, n_jobs=n_jobs,
-            #                   verbose=verbose, scoring=scoring, refit=refit)
-            gs = GridSearchCV(model, params, cv=cv,
-                              verbose=verbose, scoring=scoring, refit=refit)
-            gs.fit(X, y)
-            self.grid_searches[key] = gs
-
-    def score_summary(self, sort_by='mean_score'):
-        def row(key, scores, params):
-            d = {
-                'estimator': key,
-                'min_score': min(scores),
-                'max_score': max(scores),
-                'mean_score': np.mean(scores),
-                'std_score': np.std(scores),
-            }
-            return pd.Series(dict(params.items() + d.items()))
-
-        rows = [row(k, gsc.cv_validation_scores, gsc.parameters)
-                for k in self.keys
-                for gsc in self.grid_searches[k].grid_scores_]
-        df = pd.concat(rows, axis=1).T.sort_values([sort_by], ascending=False)
-
-        columns = ['estimator', 'min_score', 'mean_score', 'max_score', 'std_score']
-        columns = columns + [c for c in df.columns if c not in columns]
-
-        return df[columns]
+'''
