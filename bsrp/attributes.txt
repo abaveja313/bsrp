@@ -1,0 +1,21 @@
+OPTIMIZER ID: 001
+
+Cross Validation: 4
+Times To Run: 3000
+Estimator Probability: 0.5
+
+Max Values:
+{'early_stopping': 3,
+ 'estimators': 2,
+ 'mlp_layers': 3,
+ 'mlp_nodes': 150,
+ 'rf_tress': 130,
+ 'xgb_trees': 130}
+
+
+ Model Attribute Choices:
+{'mlp': ['sgd', 'lbfgs', 'adam'], 'svc': ['rbf', 'linear', 'poly']}
+
+
+ Models To Consider
+{'logit': True, 'mlp': True, 'rf': True, 'svc': True, 'xgb': True}
