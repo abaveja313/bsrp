@@ -13,7 +13,7 @@ from logging.handlers import TimedRotatingFileHandler
 logging.basicConfig(format="[ %(asctime)s][%(module)s.%(funcName)s] %(message)s")
 
 DEFAULT_LEVEL = logging.INFO
-DEFAULT_LOGGING_DIR = osp.join("logs", "gcforest")
+DEFAULT_LOGGING_DIR = None
 fh = None
 
 def init_fh():

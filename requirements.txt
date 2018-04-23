@@ -1,0 +1,15 @@
+joblib==0.11
+nibabel==2.2.1
+nilearn==0.4.1
+numpy==1.14.2
+pandas==0.22.0
+progressbar2==3.37.0
+psutil==5.4.3
+python-dateutil==2.7.2
+python-utils==2.3.0
+pytz==2018.4
+scikit-learn==0.19.1
+scipy==1.0.1
+six==1.11.0
+sklearn==0.0
+xgboost==0.71
