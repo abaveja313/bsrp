@@ -1,5 +1,9 @@
 # Using the ADHD200 dataset to diagnose ADHD using gcForest
 This is the code to accompany the paper "Machine Learning Alternatives for ADHD Diagnosis using fMRI volumes and phenotypic information" by Amrit Baveja in 2018
+
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227447.svg)](https://doi.org/10.5281/zenodo.1227447)
+
 ### It was created as an entry into the Branson Science Research Project Symposium
 ## Usage
 On OS X, remove the `yum install gcc gcc-c++` from the `run_optimizer.sh`. If you haven't already installed the Xcode command line tools, install them using `xcode-select --install` (installs C/C++ compilers needed for xgboost).
