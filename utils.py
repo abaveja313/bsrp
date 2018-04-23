@@ -32,7 +32,7 @@ class ADHD200(object):
     def __init__(self):
         self.func = []  # Paths of fMRI files
         self.ids = []  # The ids that correspond with each scan
-        self.root_dir = '/Volumes/Amrit\'s SSD'  # For local
+        self.root_dir = '<path to the downloaded data>'  # For local
         # self.root_dir = '/home/ec2-user/data' # For AWS (Use Amazon Linux AMI)
         self.fmri_glob = 'sfnwmrda*_session_*_rest_1.nii'  # the glob file to select fMRI scans
         self.id_regex = '.*?\/([0-9].*?)\/'  # The RegEx to extract the id from the file path
