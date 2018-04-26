@@ -4,7 +4,7 @@ This is the code to accompany the paper "Machine Learning Alternatives for ADHD 
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227447.svg)](https://doi.org/10.5281/zenodo.1227447)
 
-### It was created as an entry into the Branson Science Research Project Symposium
+### It was created as an entry into the 9th Grade Branson Science Research Project Symposium
 ## Usage
 On OS X, remove the `yum install gcc gcc-c++` from the `run_optimizer.sh`. If you haven't already installed the Xcode command line tools, install them using `xcode-select --install` (installs C/C++ compilers needed for xgboost).
 
@@ -35,4 +35,4 @@ Using these random combinations of these classifiers on a randomly generated tes
 
 Using spreadsheet software such as Numbers, Google Sheets or Excel, you can easilly load the CSV file and sort to find the ideal layer combination. 
 
-### All of the parameters you can adjust are inside the `__init__` method of the `Optimizer` class (main.py)
+#### All of the parameters you can adjust are inside the `__init__` method of the `Optimizer` class (main.py)
