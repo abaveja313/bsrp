@@ -35,4 +35,4 @@ Using these random combinations of these classifiers on a randomly generated tes
 
 Using spreadsheet software such as Numbers, Google Sheets or Excel, you can easilly load the CSV file and sort to find the ideal layer combination. 
 
-### All of the parameters you can tweak are inside the `__init__` method of the `Optimizer` class (main.py)
+### All of the parameters you can adjust are inside the `__init__` method of the `Optimizer` class (main.py)
