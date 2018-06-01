@@ -1,4 +1,4 @@
-# Using the ADHD200 dataset to diagnose ADHD using gcForest
+# Randomized Searching algorithm to optimize gcForest for ADHD diagnosis
 This is the code to accompany the paper "Machine Learning Alternatives for ADHD Diagnosis using fMRI volumes and phenotypic information" by Amrit Baveja in 2018
 
 
@@ -33,6 +33,6 @@ Using these random combinations of these classifiers on a randomly generated tes
 4. Precision (mean, max, min, standard deviation)
 5. Recall (mean, max, min, standard deviation)
 
-Using spreadsheet software such as Numbers, Google Sheets or Excel, you can easilly load the CSV file and sort to find the ideal layer combination. 
+Using spreadsheet software such as Numbers, Google Sheets or Excel, you can easily load the CSV file and sort/filter to find the ideal layer combination. 
 
 #### All of the parameters you can adjust are inside the `__init__` method of the `Optimizer` class (main.py)
