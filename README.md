@@ -6,7 +6,7 @@ This is the code to accompany the paper "Machine Learning Alternatives for ADHD 
 
 ### It was created as an entry into the 9th Grade Branson Science Research Project Symposium
 ## Usage
-The `run_optimizer.sh` file is meant for running on Amazon Linux (AWS) or a Centos 6/7 like Linux variant. To run on OS X, remove the `yum install gcc gcc-c++` from the `run_optimizer.sh` file. If you haven't already installed the Xcode command line tools, install them using `xcode-select --install` (installs C/C++ compilers needed for xgboost).
+The `run_optimizer.sh` file is meant for running on Amazon Linux (AWS) or a Centos 6/7 like Linux variant. To run on OS X, remove the `yum install gcc gcc-c++` from the `run_optimizer.sh` file. If you haven't already installed the Xcode command line tools, install them using `xcode-select --install` (installs C/C++ compilers needed for xgboost). Additionally, you need to specify a path to the Athena pipeline preprocessed ADHD200 data from the NITRC website in the `utils.py` file.
 
 ```
 cd <path to BSRP git repository>
