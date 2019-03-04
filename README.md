@@ -1,5 +1,5 @@
 # Randomized Searching algorithm to optimize gcForest for ADHD diagnosis
-This is the code to accompany the paper "Machine Learning Alternatives for ADHD Diagnosis using fMRI volumes and phenotypic information" by Amrit Baveja in 2018
+This is the code to accompany the paper "Machine Learning Alternatives for ADHD Diagnosis using fMRI volumes and phenotypic information"
 
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227447.svg)](https://doi.org/10.5281/zenodo.1227447)
