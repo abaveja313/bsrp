@@ -1,5 +1,5 @@
 # Randomized Searching algorithm to optimize gcForest for ADHD diagnosis
-This is the code to accompany the paper "Machine Learning Alternatives for ADHD Diagnosis using fMRI volumes and phenotypic information"
+This is the code to accompany the paper "Machine Learning Alternatives for ADHD Diagnosis using fMRI volumes and phenotypic information". Sorry for the verbose commenting... my teacher needed to understand what was going on as well!
 
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1227447.svg)](https://doi.org/10.5281/zenodo.1227447)
